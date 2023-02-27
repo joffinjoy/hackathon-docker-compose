@@ -1,0 +1,71 @@
+version: '3'
+services:
+  mongo:
+    image: 'mongo:4.4.14'
+    container_name: hackathon-mongo
+    restart: 'always'
+    ports:
+      - '27017:27017'
+    networks:
+      - hackathon_net
+    volumes:
+      - mongo-data:/data/db
+    logging:
+      driver: none
+  redis:
+    image: 'redis:7.0.0'
+    container_name: hackathon-redis
+    restart: 'always'
+    expose:
+      - '6379'
+    networks:
+      - hackathon_net
+    logging:
+      driver: none
+  hackathon-bap:
+    build: '../hackathon-bap/'
+    container_name: hackathon-bap
+    image: hackathon/hackathon-bap:1.0
+    volumes:
+      - ../hackathon-bap/src/:/var/src
+    ports:
+      - '3015:3015'
+    command: [ 'nodemon', 'app.js' ]
+    depends_on:
+      - redis
+    networks:
+      - hackathon_net
+  neo4j:
+    container_name: hackathon-neo4j
+    image: 'neo4j:latest'
+    ports:
+      - '7474:7474'
+      - '7687:7687'
+    environment:
+      - NEO4J_AUTH=none
+      - NEO4JLABS_PLUGINS=["graph-data-science"]
+      - NEO4J_dbms_security_procedures_unrestricted=gds.*
+      - NEO4J_dbms_security_procedures_allowlist=gds.* 
+    #volumes:
+    #  - neo4j-data:/data
+    networks:
+      - hackathon_net
+  hackathon-recommendation:
+    build: '../hackathon-recommendation/'
+    container_name: hackathon-recommendation
+    image: hackathon/recommendation:1.0
+    volumes:
+      - ../hackathon-recommendation/src/:/var/src
+    ports:
+      - '3020:3020'
+    command: [ 'nodemon','app.js' ]
+    depends_on:
+      - neo4j
+    networks:
+      - hackathon_net
+networks:
+  hackathon_net:
+    external: false
+volumes:
+  mongo-data:
+  #neo4j-data:
